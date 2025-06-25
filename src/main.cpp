@@ -122,17 +122,10 @@ int main()
     // Carregando as tartarugas:
     Entity turtles[6];
 
-    // Tartarugas nas pontas
-    turtles[0].x = turtles[0].y = turtles[1].x = turtles[2].y = 1;
-    turtles[1].y = turtles[2].x = turtles[3].x = turtles[3].y = 23;
+    turtles[0].x = turtles[0].y = turtles[1].x = turtles[2].y = turtles[4].x = 1;
+    turtles[1].y = turtles[2].x = turtles[3].x = turtles[3].y = turtles[5].x = 23;
+    turtles[4].y = turtles[5].y = 12;
 
-    // Novas tartarugas no centro esquerdo e direito
-    turtles[4].x = 1;
-    turtles[4].y = 12;
-    turtles[5].x = 23;
-    turtles[5].y = 12;
-
-    // Direções iniciais
     turtles[0].currentDirection = turtles[0].intentionDirection = DOWN;
     turtles[1].currentDirection = turtles[1].intentionDirection = RIGHT;
     turtles[2].currentDirection = turtles[2].intentionDirection = UP;
