@@ -1,7 +1,9 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <string>
+#include <vector>
 
+// Definindo o mapa:
 #define COMPRIMENTO 400
 #define LARGURA 420
 #define PIXEL 16
@@ -34,6 +36,11 @@ char map[mapSize][mapSize + 1] = {
     "1000000000000000000000001",
     "1111111111111111111111111"};
 
+// Definindo contadores:
+int coins = 0;
+int lifes = 1;
+
+// Definindo direções:
 enum Direction
 {
     UP,
@@ -42,8 +49,7 @@ enum Direction
     RIGHT
 };
 
-bool up = false, down = false, left = false, right = true;
-
+// Definindo entidade:
 struct Entity
 {
     int x, y;
@@ -52,8 +58,52 @@ struct Entity
     Direction currentDirection, intentionDirection;
 };
 
-int coins = 0;
+// Definindo funções:
+Direction getOppositeDirection(Direction d)
+{
+    if (d == RIGHT)
+        return LEFT;
+    else if (d == LEFT)
+        return RIGHT;
+    else if (d == UP)
+        return DOWN;
+    else
+        return UP;
+}
 
+std::vector<Direction> getAvailableRoutes(Entity e)
+{
+    std::vector<Direction> routes;
+    Direction oppositeDirection = getOppositeDirection(e.currentDirection);
+
+    // Verifica as rotas disponíveis:
+    if (map[e.x + 1][e.y] != '1' && RIGHT != oppositeDirection)
+        routes.push_back(RIGHT);
+
+    if (map[e.x - 1][e.y] != '1' && LEFT != oppositeDirection)
+        routes.push_back(LEFT);
+
+    if (map[e.x][e.y + 1] != '1' && DOWN != oppositeDirection)
+        routes.push_back(DOWN);
+
+    if (map[e.x][e.y - 1] != '1' && UP != oppositeDirection)
+        routes.push_back(UP);
+
+    if (routes.empty())
+        routes.push_back(oppositeDirection);
+
+    return routes;
+}
+
+Direction getRandomRouteAvailable(Entity e)
+{
+    // Pega uma rota disponível aleatória:
+    std::vector<Direction> routes = getAvailableRoutes(e);
+    int randomRoadIndex = rand() % routes.size();
+    return routes.at(randomRoadIndex);
+}
+
+// Método principal:
 int main()
 {
     // Renderizando a janela:
@@ -117,8 +167,6 @@ int main()
 
     player.sprite.setTexture(player.downTexture);
 
-    // player.currentDirection = player.intentionDirection = RIGHT;
-
     // Carregando as tartarugas:
     Entity turtles[6];
 
@@ -126,12 +174,12 @@ int main()
     turtles[1].y = turtles[2].x = turtles[3].x = turtles[3].y = turtles[5].x = 23;
     turtles[4].y = turtles[5].y = 12;
 
-    turtles[0].currentDirection = turtles[0].intentionDirection = DOWN;
-    turtles[1].currentDirection = turtles[1].intentionDirection = RIGHT;
-    turtles[2].currentDirection = turtles[2].intentionDirection = UP;
-    turtles[3].currentDirection = turtles[3].intentionDirection = LEFT;
-    turtles[4].currentDirection = turtles[4].intentionDirection = RIGHT;
-    turtles[5].currentDirection = turtles[5].intentionDirection = LEFT;
+    turtles[0].currentDirection = DOWN;
+    turtles[1].currentDirection = RIGHT;
+    turtles[2].currentDirection = UP;
+    turtles[3].currentDirection = LEFT;
+    turtles[4].currentDirection = RIGHT;
+    turtles[5].currentDirection = LEFT;
 
     for (int i = 0; i < 6; i++)
     {
@@ -151,29 +199,30 @@ int main()
             if (event.type == sf::Event::Closed)
                 window.close();
 
-            // Se pressiona uma tecla:
-            if (event.type == sf::Event::KeyPressed)
+            // Se Mario estiver vivo:
+            if (lifes > 0)
             {
-                // Intenção de direção = direção atual
-                player.intentionDirection = player.currentDirection;
-
-                // Define a intenção de direção:
-                switch (event.key.code)
+                // Se pressiona uma tecla:
+                if (event.type == sf::Event::KeyPressed)
                 {
-                case sf::Keyboard::Left:
-                    player.intentionDirection = LEFT;
-                    break;
-                case sf::Keyboard::Right:
-                    player.intentionDirection = RIGHT;
-                    break;
-                case sf::Keyboard::Up:
-                    player.intentionDirection = UP;
-                    break;
-                case sf::Keyboard::Down:
-                    player.intentionDirection = DOWN;
-                    break;
-                default:
-                    break;
+                    // Define a intenção de direção:
+                    switch (event.key.code)
+                    {
+                    case sf::Keyboard::Left:
+                        player.intentionDirection = LEFT;
+                        break;
+                    case sf::Keyboard::Right:
+                        player.intentionDirection = RIGHT;
+                        break;
+                    case sf::Keyboard::Up:
+                        player.intentionDirection = UP;
+                        break;
+                    case sf::Keyboard::Down:
+                        player.intentionDirection = DOWN;
+                        break;
+                    default:
+                        break;
+                    }
                 }
             }
         }
@@ -183,93 +232,123 @@ int main()
         if (clock.getElapsedTime() > sf::seconds(0.2f))
         {
             clock.restart();
-            int newX, newY;
-
-            // Carrega a nova posição das tartarugas:
-            for (int i = 0; i < 6; i++)
+            // Se Mario estiver vivo:
+            if (lifes > 0)
             {
-                newX = turtles[i].x, newY = turtles[i].y;
-                if (turtles[i].intentionDirection == LEFT)
+                int newX, newY;
+
+                // Carrega a nova posição das tartarugas:
+                for (int i = 0; i < 6; i++)
+                {
+                    newX = turtles[i].x, newY = turtles[i].y;
+
+                    if (turtles[i].currentDirection == LEFT)
+                        newX--;
+                    else if (turtles[i].currentDirection == RIGHT)
+                        newX++;
+                    else if (turtles[i].currentDirection == UP)
+                        newY--;
+                    else if (turtles[i].currentDirection == DOWN)
+                        newY++;
+
+                    coord = map[newY][newX];
+
+                    // Se for uma parede:
+                    if (coord == '1')
+                    {
+                        turtles[i].currentDirection = getRandomRouteAvailable(turtles[i]);
+                    }
+                    // Se não for uma parede:
+                    else
+                    {
+                        std::vector<Direction> routes = getAvailableRoutes(turtles[i]);
+                        int routesSize = routes.size();
+                        std::cout << routesSize << " ";
+
+                        if (routesSize > 1)
+                            turtles[i].currentDirection = getRandomRouteAvailable(turtles[i]);
+                        else if (routesSize == 1)
+                            turtles[i].currentDirection = routes.at(0);
+                        else
+                            std::cout << "Erro: tartaruga sem caminho disponível." << std::endl;
+
+                        turtles[i].x = newX;
+                        turtles[i].y = newY;
+                    }
+                }
+                std::cout << std::endl;
+
+                // Carrega a nova posição do Mario:
+                int tryX = player.x, tryY = player.y;
+
+                // Tenta seguir a intenção de direção:
+                if (player.intentionDirection == LEFT)
+                    tryX--;
+                else if (player.intentionDirection == RIGHT)
+                    tryX++;
+                else if (player.intentionDirection == UP)
+                    tryY--;
+                else if (player.intentionDirection == DOWN)
+                    tryY++;
+
+                coord = map[tryY][tryX];
+
+                // Se não for uma parede:
+                if (coord != '1')
+                {
+                    // Movimenta para a direção desejada:
+                    player.currentDirection = player.intentionDirection;
+                }
+
+                // Tenta seguir a direção atual:
+                newX = player.x, newY = player.y;
+
+                if (player.currentDirection == LEFT)
                     newX--;
-                else if (turtles[i].intentionDirection == RIGHT)
+                else if (player.currentDirection == RIGHT)
                     newX++;
-                else if (turtles[i].intentionDirection == UP)
+                else if (player.currentDirection == UP)
                     newY--;
-                else if (turtles[i].intentionDirection == DOWN)
+                else if (player.currentDirection == DOWN)
                     newY++;
 
                 coord = map[newY][newX];
-                // Se for uma parede:
-                if (coord == '1')
-                {
-                    Direction newDirection = Direction(rand() % 4);
-                    while (turtles[i].intentionDirection == newDirection)
-                        newDirection = Direction(rand() % 4);
 
-                    turtles[i].intentionDirection = newDirection;
-                }
                 // Se não for uma parede:
-                else
+                if (coord != '1')
                 {
-                    turtles[i].currentDirection = turtles[i].intentionDirection;
+                    if (player.currentDirection == LEFT)
+                        player.sprite.setTexture(player.leftTexture);
+                    else if (player.currentDirection == RIGHT)
+                        player.sprite.setTexture(player.rightTexture);
+                    else if (player.currentDirection == UP)
+                        player.sprite.setTexture(player.upTexture);
+                    else if (player.currentDirection == DOWN)
+                        player.sprite.setTexture(player.downTexture);
 
-                    turtles[i].x = newX;
-                    turtles[i].y = newY;
-                }
-            }
+                    player.x = newX;
+                    player.y = newY;
 
-            // Carrega a nova posição do Mario:
-            newX = player.x, newY = player.y;
-
-            if (player.intentionDirection == LEFT)
-                newX--;
-            else if (player.intentionDirection == RIGHT)
-                newX++;
-            else if (player.intentionDirection == UP)
-                newY--;
-            else if (player.intentionDirection == DOWN)
-                newY++;
-
-            coord = map[newY][newX];
-            // Se não for uma parede:
-            if (coord != '1')
-            {
-                if (player.intentionDirection == LEFT)
-                {
-                    left = true;
-                    right = up = down = false;
-                    player.sprite.setTexture(player.leftTexture);
-                }
-                else if (player.intentionDirection == RIGHT)
-                {
-                    right = true;
-                    left = up = down = false;
-                    player.sprite.setTexture(player.rightTexture);
-                }
-                else if (player.intentionDirection == UP)
-                {
-                    up = true;
-                    down = left = right = false;
-                    player.sprite.setTexture(player.upTexture);
-                }
-                else if (player.intentionDirection == DOWN)
-                {
-                    down = true;
-                    up = left = right = false;
-                    player.sprite.setTexture(player.downTexture);
+                    // Se coletar uma moeda:
+                    if (coord == '0')
+                    {
+                        // Limpa a moeda do mapa e soma no contador:
+                        map[newY][newX] = ' ';
+                        coins++;
+                        coinText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
+                    }
                 }
 
-                player.currentDirection = player.intentionDirection;
-
-                player.x = newX;
-                player.y = newY;
-
-                std::cout << player.x << ", " << player.y << std::endl;
-                if (coord == '0')
+                // Verifica encontro de tartarugas e Mario:
+                for (int i = 0; i < 6; i++)
                 {
-                    map[newY][newX] = ' ';
-                    coins++;
-                    coinText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
+                    if (player.x == turtles[i].x && player.y == turtles[i].y)
+                    {
+                        // Retira vida do Mario:
+                        lifes--;
+                        std::cout << "Mario foi atacado! " + std::to_string(lifes) + " vidas restantes.\n";
+                        break;
+                    }
                 }
             }
         }
