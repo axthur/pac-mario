@@ -76,17 +76,16 @@ std::vector<Direction> getAvailableRoutes(Entity e)
     std::vector<Direction> routes;
     Direction oppositeDirection = getOppositeDirection(e.currentDirection);
 
-    // Verifica as rotas disponíveis:
-    if (map[e.x + 1][e.y] != '1' && RIGHT != oppositeDirection)
+    if (map[e.y][e.x + 1] != '1' && RIGHT != oppositeDirection)
         routes.push_back(RIGHT);
 
-    if (map[e.x - 1][e.y] != '1' && LEFT != oppositeDirection)
+    if (map[e.y][e.x - 1] != '1' && LEFT != oppositeDirection)
         routes.push_back(LEFT);
 
-    if (map[e.x][e.y + 1] != '1' && DOWN != oppositeDirection)
+    if (map[e.y + 1][e.x] != '1' && DOWN != oppositeDirection)
         routes.push_back(DOWN);
 
-    if (map[e.x][e.y - 1] != '1' && UP != oppositeDirection)
+    if (map[e.y - 1][e.x] != '1' && UP != oppositeDirection)
         routes.push_back(UP);
 
     if (routes.empty())
@@ -261,6 +260,9 @@ int main()
                     // Se não for uma parede:
                     else
                     {
+                        turtles[i].x = newX;
+                        turtles[i].y = newY;
+
                         std::vector<Direction> routes = getAvailableRoutes(turtles[i]);
                         int routesSize = routes.size();
                         std::cout << routesSize << " ";
@@ -271,9 +273,6 @@ int main()
                             turtles[i].currentDirection = routes.at(0);
                         else
                             std::cout << "Erro: tartaruga sem caminho disponível." << std::endl;
-
-                        turtles[i].x = newX;
-                        turtles[i].y = newY;
                     }
                 }
                 std::cout << std::endl;
