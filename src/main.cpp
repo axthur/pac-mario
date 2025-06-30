@@ -12,8 +12,8 @@ const int mapSize = 25;
 char map[mapSize][mapSize + 1] = {
     "1111111111111111111111111",
     "1000000000000000000000001",
-    "1011110111110111110111101",
-    "1010000100000100000100001",
+    "1011110111110110110111101",
+    "1010000100000000100100001",
     "1010110111110111110101101",
     "1000100001000001000000101",
     "1111111011111110111111111",
@@ -28,8 +28,8 @@ char map[mapSize][mapSize + 1] = {
     "1000000010000100000000001",
     "1011111011110111111011101",
     "1000001000000000001000001",
-    "1111111011111110111111111",
-    "1000100001000001000000101",
+    "1111111011111110111111101",
+    "1000100001000000000000101",
     "1010110111110111110101101",
     "1010000100000100000100001",
     "1011110111110111110111101",
@@ -53,7 +53,8 @@ enum Direction
 struct Entity
 {
     int x, y;
-    sf::Texture texture, rightTexture, leftTexture, upTexture, downTexture;
+    int prevX, prevY;
+    sf::Texture texture, rightTexture, leftTexture, upTexture, downTexture, deathTexture;
     sf::Sprite sprite;
     Direction currentDirection, intentionDirection;
 };
@@ -112,9 +113,9 @@ int main()
     window.setIcon(16, 16, icon.getPixelsPtr());
 
     // Carregando o fundo:
-    sf::Texture backgroundTexture;
+    /*sf::Texture backgroundTexture;
     backgroundTexture.loadFromFile("./assets/map.png");
-    sf::Sprite background(backgroundTexture);
+    sf::Sprite background(backgroundTexture);*/
 
     // Carregando as paredes:
     sf::Texture blockTexture;
@@ -150,7 +151,7 @@ int main()
     sf::Texture counterTexture;
     counterTexture.loadFromFile("./assets/counter.png");
     sf::Sprite counterSprite(counterTexture);
-    counterSprite.setPosition(5, 405);
+    counterSprite.setPosition(5, 404);
 
     coinText.setString("0 de " + std::to_string(totalCoins));
 
@@ -158,11 +159,14 @@ int main()
     Entity player;
     player.x = 12;
     player.y = 11;
+    player.prevX = player.x;
+    player.prevY = player.y;
 
     player.rightTexture.loadFromFile("./assets/mario_right.png");
     player.leftTexture.loadFromFile("./assets/mario_left.png");
     player.upTexture.loadFromFile("./assets/mario_up.png");
     player.downTexture.loadFromFile("./assets/mario_down.png");
+    player.deathTexture.loadFromFile("./assets/mario_death.png");
 
     player.sprite.setTexture(player.downTexture);
 
@@ -182,7 +186,9 @@ int main()
 
     for (int i = 0; i < 6; i++)
     {
-        turtles[i].texture.loadFromFile("./assets/shell.gif");
+        turtles[i].prevX = turtles[i].x;
+        turtles[i].prevY = turtles[i].y;
+        turtles[i].texture.loadFromFile("./assets/shell.png");
         turtles[i].sprite.setTexture(turtles[i].texture);
     }
 
@@ -236,9 +242,16 @@ int main()
             {
                 int newX, newY;
 
+                // Salva a posição anterior do Mario:
+                player.prevX = player.x;
+                player.prevY = player.y;
+
                 // Carrega a nova posição das tartarugas:
                 for (int i = 0; i < 6; i++)
                 {
+                    turtles[i].prevX = turtles[i].x;
+                    turtles[i].prevY = turtles[i].y;
+
                     newX = turtles[i].x, newY = turtles[i].y;
 
                     if (turtles[i].currentDirection == LEFT)
@@ -265,7 +278,6 @@ int main()
 
                         std::vector<Direction> routes = getAvailableRoutes(turtles[i]);
                         int routesSize = routes.size();
-                        std::cout << routesSize << " ";
 
                         if (routesSize > 1)
                             turtles[i].currentDirection = getRandomRouteAvailable(turtles[i]);
@@ -275,7 +287,6 @@ int main()
                             std::cout << "Erro: tartaruga sem caminho disponível." << std::endl;
                     }
                 }
-                std::cout << std::endl;
 
                 // Carrega a nova posição do Mario:
                 int tryX = player.x, tryY = player.y;
@@ -341,20 +352,41 @@ int main()
                 // Verifica encontro de tartarugas e Mario:
                 for (int i = 0; i < 6; i++)
                 {
-                    if (player.x == turtles[i].x && player.y == turtles[i].y)
+                    // Se estão no mesmo pixel:
+                    bool sameSpot = (player.x == turtles[i].x && player.y == turtles[i].y);
+
+                    // Se eles se atravessaram:
+                    bool crossed = (player.x == turtles[i].prevX && player.y == turtles[i].prevY &&
+                                    player.prevX == turtles[i].x && player.prevY == turtles[i].y);
+
+                    // Se eles tem colisão:
+                    if (sameSpot || crossed)
                     {
                         // Retira vida do Mario:
                         lifes--;
                         std::cout << "Mario foi atacado! " + std::to_string(lifes) + " vidas restantes.\n";
+
+                        // Se o Mario morreu:
+                        if (lifes == 0)
+                        {
+                            player.sprite.setTexture(player.deathTexture);
+                            player.y--;
+                        }
                         break;
                     }
                 }
+            }
+            // Se o Mario estiver morto:
+            else
+            {
+                if (player.y < LARGURA + 1)
+                    player.y++;
             }
         }
 
         // Desenha o fundo:
         window.clear(sf::Color::Black);
-        window.draw(background);
+        // window.draw(background);
 
         // Desenha o mapa:
         for (int i = 0; i < mapSize; i++)
