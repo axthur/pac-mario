@@ -1,4 +1,6 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -37,7 +39,7 @@ char map[mapSize][mapSize + 1] = {
     "1111111111111111111111111"};
 
 // Definindo contadores:
-int coins = 0;
+int coins = 0, totalCoins = 0;
 int lifes = 1;
 
 // Definindo direções:
@@ -60,6 +62,51 @@ struct Entity
 };
 
 // Definindo funções:
+void restartGame(Entity &player, Entity turtles[6], sf::Text &coinText, int &coins, int &lifes, sf::Music &themeMusic)
+{
+    // Reseta o Mario:
+    player.x = 12;
+    player.y = 11;
+    player.prevX = player.x;
+    player.prevY = player.y;
+    player.sprite.setTexture(player.downTexture);
+    player.currentDirection = player.intentionDirection = UP;
+
+    // Restaura a vida:
+    lifes = 1;
+
+    // Reposiciona as moedas:
+    coins = 0;
+
+    for (int i = 0; i < mapSize; i++)
+        for (int j = 0; j < mapSize; j++)
+            if (map[i][j] == ' ')
+                map[i][j] = '0';
+
+    // Inicia a posição das tartarugas:
+    turtles[0].x = turtles[0].y = turtles[1].x = turtles[2].y = turtles[4].x = 1;
+    turtles[1].y = turtles[2].x = turtles[3].x = turtles[3].y = turtles[5].x = 23;
+    turtles[4].y = turtles[5].y = 12;
+
+    turtles[0].currentDirection = DOWN;
+    turtles[1].currentDirection = turtles[4].currentDirection = RIGHT;
+    turtles[2].currentDirection = UP;
+    turtles[3].currentDirection = turtles[5].currentDirection = LEFT;
+
+    for (int i = 0; i < 6; i++)
+    {
+        turtles[i].prevX = turtles[i].x;
+        turtles[i].prevY = turtles[i].y;
+    }
+
+    // Reseta o contador de moedas:
+    coinText.setString("0 de " + std::to_string(totalCoins));
+
+    // Inicia a música tema:
+    themeMusic.play();
+    themeMusic.setLoop(true);
+}
+
 Direction getOppositeDirection(Direction d)
 {
     if (d == RIGHT)
@@ -74,6 +121,7 @@ Direction getOppositeDirection(Direction d)
 
 std::vector<Direction> getAvailableRoutes(Entity e)
 {
+    // Pega todas as rotas disponíveis:
     std::vector<Direction> routes;
     Direction oppositeDirection = getOppositeDirection(e.currentDirection);
 
@@ -129,11 +177,7 @@ int main()
 
     // Carregando o contador de moedas:
     sf::Font font;
-    if (!font.loadFromFile("./assets/super_mario_world.ttf"))
-    {
-        std::cerr << "Erro ao carregar a fonte!" << std::endl;
-        return 1;
-    }
+    font.loadFromFile("./assets/super_mario_world.ttf");
 
     sf::Text coinText;
     coinText.setFont(font);
@@ -141,56 +185,57 @@ int main()
     coinText.setFillColor(sf::Color::White);
     coinText.setPosition(22, 404);
 
-    // Contando o total de moedas:
-    int totalCoins = 0;
-    for (int i = 0; i < mapSize; i++)
-        for (int j = 0; j < mapSize; j++)
-            if (map[i][j] == '0')
-                totalCoins++;
-
     sf::Texture counterTexture;
     counterTexture.loadFromFile("./assets/counter.png");
     sf::Sprite counterSprite(counterTexture);
     counterSprite.setPosition(5, 404);
 
+    for (int i = 0; i < mapSize; i++)
+        for (int j = 0; j < mapSize; j++)
+            if (map[i][j] == '0')
+                totalCoins++;
+
     coinText.setString("0 de " + std::to_string(totalCoins));
+
+    // Carregando texto de vitória:
+    sf::Text victoryText;
+    victoryText.setFont(font);
+    victoryText.setCharacterSize(20);
+    victoryText.setFillColor(sf::Color::White);
+    victoryText.setPosition(120, 180);
+    victoryText.setString("PARABENS!");
 
     // Carregando o Mario:
     Entity player;
-    player.x = 12;
-    player.y = 11;
-    player.prevX = player.x;
-    player.prevY = player.y;
-
     player.rightTexture.loadFromFile("./assets/mario_right.png");
     player.leftTexture.loadFromFile("./assets/mario_left.png");
     player.upTexture.loadFromFile("./assets/mario_up.png");
     player.downTexture.loadFromFile("./assets/mario_down.png");
     player.deathTexture.loadFromFile("./assets/mario_death.png");
 
-    player.sprite.setTexture(player.downTexture);
-
     // Carregando as tartarugas:
     Entity turtles[6];
-
-    turtles[0].x = turtles[0].y = turtles[1].x = turtles[2].y = turtles[4].x = 1;
-    turtles[1].y = turtles[2].x = turtles[3].x = turtles[3].y = turtles[5].x = 23;
-    turtles[4].y = turtles[5].y = 12;
-
-    turtles[0].currentDirection = DOWN;
-    turtles[1].currentDirection = RIGHT;
-    turtles[2].currentDirection = UP;
-    turtles[3].currentDirection = LEFT;
-    turtles[4].currentDirection = RIGHT;
-    turtles[5].currentDirection = LEFT;
+    turtles[0].texture.loadFromFile("./assets/yellow_shell.png");
+    turtles[1].texture.loadFromFile("./assets/purple_shell.png");
+    turtles[2].texture.loadFromFile("./assets/red_shell.png");
+    turtles[3].texture.loadFromFile("./assets/green_shell.png");
+    turtles[4].texture.loadFromFile("./assets/cyan_shell.png");
+    turtles[5].texture.loadFromFile("./assets/gray_shell.png");
 
     for (int i = 0; i < 6; i++)
-    {
-        turtles[i].prevX = turtles[i].x;
-        turtles[i].prevY = turtles[i].y;
-        turtles[i].texture.loadFromFile("./assets/shell.png");
         turtles[i].sprite.setTexture(turtles[i].texture);
-    }
+
+    // Carregando efeitos sonoros:
+    sf::Music victorySfx, gameOverSfx, coinSfx;
+    victorySfx.openFromFile("./assets/victory.wav");
+    gameOverSfx.openFromFile("./assets/game_over.wav");
+    coinSfx.openFromFile("./assets/coin.wav");
+
+    sf::Music themeMusic;
+    themeMusic.openFromFile("./assets/theme.wav");
+
+    // Iniciando o jogo pela primeira vez:
+    restartGame(player, turtles, coinText, coins, lifes, themeMusic);
 
     // Definindo o clock:
     sf::Clock clock;
@@ -198,36 +243,54 @@ int main()
     // Enquanto a janela estiver aberta:
     while (window.isOpen())
     {
+        bool victory = coins >= totalCoins, death = lifes <= 0;
+        bool isTheGameOver = victory || death;
+
         sf::Event event;
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed)
                 window.close();
 
-            // Se Mario estiver vivo:
-            if (lifes > 0)
+            // Se pressiona uma tecla:
+            if (event.type == sf::Event::KeyPressed)
             {
-                // Se pressiona uma tecla:
-                if (event.type == sf::Event::KeyPressed)
+                // Define a intenção de direção:
+                switch (event.key.code)
                 {
-                    // Define a intenção de direção:
-                    switch (event.key.code)
-                    {
-                    case sf::Keyboard::Left:
+                case sf::Keyboard::Left:
+                    if (!isTheGameOver)
                         player.intentionDirection = LEFT;
-                        break;
-                    case sf::Keyboard::Right:
+                    break;
+                case sf::Keyboard::Right:
+                    if (!isTheGameOver)
                         player.intentionDirection = RIGHT;
-                        break;
-                    case sf::Keyboard::Up:
+                    break;
+                case sf::Keyboard::Up:
+                    if (!isTheGameOver)
                         player.intentionDirection = UP;
-                        break;
-                    case sf::Keyboard::Down:
+                    break;
+                case sf::Keyboard::Down:
+                    if (!isTheGameOver)
                         player.intentionDirection = DOWN;
-                        break;
-                    default:
-                        break;
+                    break;
+                case sf::Keyboard::Return:
+                    if (isTheGameOver)
+                    {
+                        restartGame(player, turtles, coinText, coins, lifes, themeMusic);
+                        gameOverSfx.stop();
+                        victorySfx.stop();
                     }
+                    break;
+                case sf::Keyboard::Backspace:
+                    coins = totalCoins;
+                    coinText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
+                    themeMusic.stop();
+                    victorySfx.play();
+                    victory = true;
+                    break;
+                default:
+                    break;
                 }
             }
         }
@@ -238,7 +301,7 @@ int main()
         {
             clock.restart();
             // Se Mario estiver vivo:
-            if (lifes > 0)
+            if (!isTheGameOver)
             {
                 int newX, newY;
 
@@ -345,7 +408,17 @@ int main()
                         // Limpa a moeda do mapa e soma no contador:
                         map[newY][newX] = ' ';
                         coins++;
+                        // coinSfx.play();
                         coinText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
+
+                        // Se tiver acabado as moedas:
+                        if (coins == totalCoins)
+                        {
+                            themeMusic.stop();
+                            victorySfx.play();
+
+                            victory = true;
+                        }
                     }
                 }
 
@@ -353,31 +426,36 @@ int main()
                 for (int i = 0; i < 6; i++)
                 {
                     // Se estão no mesmo pixel:
-                    bool sameSpot = (player.x == turtles[i].x && player.y == turtles[i].y);
+                    bool samePixel = (player.x == turtles[i].x && player.y == turtles[i].y);
 
                     // Se eles se atravessaram:
                     bool crossed = (player.x == turtles[i].prevX && player.y == turtles[i].prevY &&
                                     player.prevX == turtles[i].x && player.prevY == turtles[i].y);
 
                     // Se eles tem colisão:
-                    if (sameSpot || crossed)
+                    if (samePixel || crossed)
                     {
                         // Retira vida do Mario:
                         lifes--;
                         std::cout << "Mario foi atacado! " + std::to_string(lifes) + " vidas restantes.\n";
 
                         // Se o Mario morreu:
-                        if (lifes == 0)
+                        if (lifes <= 0)
                         {
+                            themeMusic.stop();
+                            gameOverSfx.play();
+
                             player.sprite.setTexture(player.deathTexture);
                             player.y--;
+
+                            death = true;
                         }
                         break;
                     }
                 }
             }
             // Se o Mario estiver morto:
-            else
+            else if (death)
             {
                 if (player.y < LARGURA + 1)
                     player.y++;
@@ -421,6 +499,10 @@ int main()
         // Desenha o contador de moedas:
         window.draw(counterSprite);
         window.draw(coinText);
+
+        // Se venceu, aparece texto de vitória:
+        if (victory)
+            window.draw(victoryText);
 
         // Exibe a janela:
         window.display();
