@@ -1,9 +1,12 @@
+// TODO: Adicionar túneis e estrelas
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
 #include <iostream>
 #include <string>
 #include <vector>
+#include <iomanip>
+#include <sstream>
 
 // Definindo o mapa:
 #define COMPRIMENTO 400
@@ -15,23 +18,23 @@ char map[mapSize][mapSize + 1] = {
     "1111111111111111111111111",
     "1000000000000000000000001",
     "1011110111110110110111101",
-    "1010000100000000100100001",
+    "1010000100000000110100001",
     "1010110111110111110101101",
     "1000100001000001000000101",
-    "1111111011111110111111111",
+    "1111111011111111111111111",
     "1000001000000000001000001",
     "1011111011110111111011101",
-    "1000000010000100000000001",
+    "1000000010000000000000001",
     "1011111110111111011111101",
     "1000000000100001000000001",
-    "1011111111110111111111101",
+    "1011111110110111011111101",
     "1000000000000000000000001",
     "1111111110111111011111111",
     "1000000010000100000000001",
     "1011111011110111111011101",
     "1000001000000000001000001",
     "1111111011111110111111101",
-    "1000100001000000000000101",
+    "1000110001000000000000101",
     "1010110111110111110101101",
     "1010000100000100000100001",
     "1011110111110111110111101",
@@ -40,7 +43,14 @@ char map[mapSize][mapSize + 1] = {
 
 // Definindo contadores:
 int coins = 0, totalCoins = 0;
+int points = 0;
 int lifes = 1;
+int mushrooms = 0;
+
+double interval = 0.2f, mushroomInterval = 0;
+
+bool isMushroomAvailable = false;
+bool drawRect = false;
 
 // Definindo direções:
 enum Direction
@@ -62,7 +72,7 @@ struct Entity
 };
 
 // Definindo funções:
-void restartGame(Entity &player, Entity turtles[6], sf::Text &coinText, int &coins, int &lifes, sf::Music &themeMusic)
+void restartGame(Entity &player, Entity turtles[6], sf::Text &coinsText, int &coins, int &lifes, sf::Music &themeMusic, sf::Text &pointsText)
 {
     // Reseta o Mario:
     player.x = 12;
@@ -75,8 +85,9 @@ void restartGame(Entity &player, Entity turtles[6], sf::Text &coinText, int &coi
     // Restaura a vida:
     lifes = 1;
 
-    // Reposiciona as moedas:
-    coins = 0;
+    // Reinicia os contadores:
+    coins = points = 0;
+    mushroomInterval = 0;
 
     for (int i = 0; i < mapSize; i++)
         for (int j = 0; j < mapSize; j++)
@@ -99,12 +110,20 @@ void restartGame(Entity &player, Entity turtles[6], sf::Text &coinText, int &coi
         turtles[i].prevY = turtles[i].y;
     }
 
-    // Reseta o contador de moedas:
-    coinText.setString("0 de " + std::to_string(totalCoins));
+    // Reseta os contadores:
+    coinsText.setString("0 de " + std::to_string(totalCoins));
+    pointsText.setString("00000");
 
     // Inicia a música tema:
     themeMusic.play();
     themeMusic.setLoop(true);
+}
+
+std::string getFormattedPoints(int p)
+{
+    std::ostringstream oss;
+    oss << std::setfill('0') << std::setw(5) << p;
+    return oss.str();
 }
 
 Direction getOppositeDirection(Direction d)
@@ -165,6 +184,11 @@ int main()
     backgroundTexture.loadFromFile("./assets/map.png");
     sf::Sprite background(backgroundTexture);*/
 
+    // Carregando o retângulo final:
+    sf::RectangleShape rectangle(sf::Vector2f(LARGURA, COMPRIMENTO));
+    rectangle.setFillColor(sf::Color::Black);
+    rectangle.setPosition(0, 0);
+
     // Carregando as paredes:
     sf::Texture blockTexture;
     blockTexture.loadFromFile("./assets/block.png");
@@ -179,11 +203,11 @@ int main()
     sf::Font font;
     font.loadFromFile("./assets/super_mario_world.ttf");
 
-    sf::Text coinText;
-    coinText.setFont(font);
-    coinText.setCharacterSize(8);
-    coinText.setFillColor(sf::Color::White);
-    coinText.setPosition(22, 404);
+    sf::Text coinsText;
+    coinsText.setFont(font);
+    coinsText.setCharacterSize(8);
+    coinsText.setFillColor(sf::Color::White);
+    coinsText.setPosition(22, 404);
 
     sf::Texture counterTexture;
     counterTexture.loadFromFile("./assets/counter.png");
@@ -195,15 +219,29 @@ int main()
             if (map[i][j] == '0')
                 totalCoins++;
 
-    coinText.setString("0 de " + std::to_string(totalCoins));
+    coinsText.setString("0 de " + std::to_string(totalCoins));
+
+    // Carregando o contador de pontos:
+    sf::Text pointsText;
+    pointsText.setFont(font);
+    pointsText.setCharacterSize(12);
+    pointsText.setFillColor(sf::Color::White);
+    pointsText.setPosition(173, 400);
+    pointsText.setString("00000");
 
     // Carregando texto de vitória:
-    sf::Text victoryText;
-    victoryText.setFont(font);
-    victoryText.setCharacterSize(20);
-    victoryText.setFillColor(sf::Color::White);
-    victoryText.setPosition(120, 180);
-    victoryText.setString("PARABENS!");
+    sf::Text finalText;
+    finalText.setFont(font);
+    finalText.setCharacterSize(20);
+    finalText.setFillColor(sf::Color::White);
+    finalText.setString(" ");
+
+    sf::Text restartText;
+    restartText.setFont(font);
+    restartText.setCharacterSize(10);
+    restartText.setFillColor(sf::Color::White);
+    restartText.setPosition(75, 200);
+    restartText.setString("Aperte ENTER para jogar de novo");
 
     // Carregando o Mario:
     Entity player;
@@ -225,17 +263,26 @@ int main()
     for (int i = 0; i < 6; i++)
         turtles[i].sprite.setTexture(turtles[i].texture);
 
-    // Carregando efeitos sonoros:
-    sf::Music victorySfx, gameOverSfx, coinSfx;
-    victorySfx.openFromFile("./assets/victory.wav");
-    gameOverSfx.openFromFile("./assets/game_over.wav");
-    coinSfx.openFromFile("./assets/coin.wav");
+    // Carregando o cogumelo:
+    Entity mushroom;
+    mushroom.x = 12;
+    mushroom.y = 13;
+    mushroom.texture.loadFromFile("./assets/mushroom.png");
+    mushroom.sprite.setTexture(mushroom.texture);
 
-    sf::Music themeMusic;
+    // Carregando efeitos sonoros:
+    sf::Music coinSfx, mushroomSfx;
+    coinSfx.openFromFile("./assets/coin.wav");
+    mushroomSfx.openFromFile("./assets/1_up.wav");
+
+    sf::Music themeMusic, victoryMusic, marioDiesMusic, gameOverMusic;
     themeMusic.openFromFile("./assets/theme.wav");
+    victoryMusic.openFromFile("./assets/victory.wav");
+    marioDiesMusic.openFromFile("./assets/mario_dies.wav");
+    gameOverMusic.openFromFile("./assets/game_over.wav");
 
     // Iniciando o jogo pela primeira vez:
-    restartGame(player, turtles, coinText, coins, lifes, themeMusic);
+    restartGame(player, turtles, coinsText, coins, lifes, themeMusic, pointsText);
 
     // Definindo o clock:
     sf::Clock clock;
@@ -277,16 +324,21 @@ int main()
                 case sf::Keyboard::Return:
                     if (isTheGameOver)
                     {
-                        restartGame(player, turtles, coinText, coins, lifes, themeMusic);
-                        gameOverSfx.stop();
-                        victorySfx.stop();
+                        finalText.setString(" ");
+
+                        restartGame(player, turtles, coinsText, coins, lifes, themeMusic, pointsText);
+                        marioDiesMusic.stop();
+                        gameOverMusic.stop();
+                        victoryMusic.stop();
+
+                        drawRect = false;
                     }
                     break;
                 case sf::Keyboard::Backspace:
                     coins = totalCoins;
-                    coinText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
+                    coinsText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
                     themeMusic.stop();
-                    victorySfx.play();
+                    victoryMusic.play();
                     victory = true;
                     break;
                 default:
@@ -297,9 +349,16 @@ int main()
 
         // Atualiza a cada 0.2 segundos:
         char coord;
-        if (clock.getElapsedTime() > sf::seconds(0.2f))
+        if (clock.getElapsedTime() > sf::seconds(interval))
         {
             clock.restart();
+            mushroomInterval += interval;
+            // Se tiver passado 30 segundos, o cogumelo aparecerá de novo:
+            if (mushroomInterval >= 30 && mushrooms < 3)
+                isMushroomAvailable = true;
+
+            std::cout << mushroomInterval << std::endl;
+
             // Se Mario estiver vivo:
             if (!isTheGameOver)
             {
@@ -408,17 +467,28 @@ int main()
                         // Limpa a moeda do mapa e soma no contador:
                         map[newY][newX] = ' ';
                         coins++;
-                        // coinSfx.play();
-                        coinText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
+                        points += 10;
+                        coinSfx.play();
+                        coinsText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
+                        pointsText.setString(getFormattedPoints(points));
 
                         // Se tiver acabado as moedas:
                         if (coins == totalCoins)
                         {
                             themeMusic.stop();
-                            victorySfx.play();
+                            victoryMusic.play();
 
                             victory = true;
                         }
+                    }
+                    // Se coletar um cogumelo:
+                    else if (newX == mushroom.x && newY == mushroom.y && isMushroomAvailable)
+                    {
+                        mushroomSfx.play();
+                        points += 100;
+                        mushroomInterval = 0;
+                        isMushroomAvailable = false;
+                        mushrooms++;
                     }
                 }
 
@@ -443,7 +513,7 @@ int main()
                         if (lifes <= 0)
                         {
                             themeMusic.stop();
-                            gameOverSfx.play();
+                            marioDiesMusic.play();
 
                             player.sprite.setTexture(player.deathTexture);
                             player.y--;
@@ -457,8 +527,21 @@ int main()
             // Se o Mario estiver morto:
             else if (death)
             {
-                if (player.y < LARGURA + 1)
+                if (player.y < (LARGURA / PIXEL) + 1)
                     player.y++;
+                else if (marioDiesMusic.getStatus() == 0)
+                    drawRect = true;
+
+                finalText.setString("GAME OVER");
+                finalText.setPosition(130, 180);
+            }
+            // Se o Mario coletar todas moedas:
+            else if (victory)
+            {
+                finalText.setString("VICTORY");
+                finalText.setPosition(140, 180);
+
+                drawRect = true;
             }
         }
 
@@ -496,13 +579,28 @@ int main()
         player.sprite.setPosition(player.x * PIXEL, player.y * PIXEL);
         window.draw(player.sprite);
 
-        // Desenha o contador de moedas:
+        // Desenha o cogumelo:
+        if (isMushroomAvailable)
+        {
+            mushroom.sprite.setPosition(mushroom.x * PIXEL, mushroom.y * PIXEL);
+            window.draw(mushroom.sprite);
+        }
+
+        // Desenha os contadores:
         window.draw(counterSprite);
-        window.draw(coinText);
+        window.draw(coinsText);
+
+        window.draw(pointsText);
 
         // Se venceu, aparece texto de vitória:
-        if (victory)
-            window.draw(victoryText);
+        if (drawRect)
+            window.draw(rectangle);
+
+        if (isTheGameOver && drawRect)
+        {
+            window.draw(finalText);
+            window.draw(restartText);
+        }
 
         // Exibe a janela:
         window.display();
