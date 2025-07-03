@@ -1,4 +1,3 @@
-// TODO: Adicionar túneis e estrelas
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
@@ -15,7 +14,7 @@
 
 const int mapSize = 25;
 char map[mapSize][mapSize + 1] = {
-    "1111111111111111111111111",
+    "1111111111110111111111111",
     "1000000000000000000000001",
     "1011110111110110110111101",
     "1010000100000000110100001",
@@ -28,7 +27,7 @@ char map[mapSize][mapSize + 1] = {
     "1011111110111111011111101",
     "1000000000100001000000001",
     "1011111110110111011111101",
-    "1000000000000000000000001",
+    "0000000000000000000000000",
     "1111111110111111011111111",
     "1000000010000100000000001",
     "1011111011110111111011101",
@@ -39,7 +38,7 @@ char map[mapSize][mapSize + 1] = {
     "1010000100000100000100001",
     "1011110111110111110111101",
     "1000000000000000000000001",
-    "1111111111111111111111111"};
+    "1111111111110111111111111"};
 
 // Definindo contadores:
 int coins = 0, totalCoins = 0;
@@ -47,7 +46,7 @@ int points = 0;
 int lifes = 1;
 int mushrooms = 0;
 
-double interval = 0.2f, mushroomInterval = 0;
+double interval = 0.2f, mushroomInterval = 0, starInterval = 0;
 
 bool isMushroomAvailable = false;
 bool drawRect = false;
@@ -65,6 +64,7 @@ enum Direction
 struct Entity
 {
     int x, y;
+    bool estrela;
     int prevX, prevY;
     sf::Texture texture, rightTexture, leftTexture, upTexture, downTexture, deathTexture;
     sf::Sprite sprite;
@@ -72,11 +72,12 @@ struct Entity
 };
 
 // Definindo funções:
-void restartGame(Entity &player, Entity turtles[6], sf::Text &coinsText, int &coins, int &lifes, sf::Music &themeMusic, sf::Text &pointsText)
+void restartGame(Entity &player, Entity turtles[6], Entity estrelas[6], sf::Text &coinsText, int &coins, int &lifes, sf::Music &themeMusic, sf::Text &pointsText)
 {
     // Reseta o Mario:
     player.x = 12;
     player.y = 11;
+    player.estrela = false;
     player.prevX = player.x;
     player.prevY = player.y;
     player.sprite.setTexture(player.downTexture);
@@ -108,6 +109,30 @@ void restartGame(Entity &player, Entity turtles[6], sf::Text &coinsText, int &co
     {
         turtles[i].prevX = turtles[i].x;
         turtles[i].prevY = turtles[i].y;
+    }
+
+    // Inicia a posição das estrelas:
+    estrelas[0].x = 13;
+    estrelas[0].y = 1;
+
+    estrelas[1].x = 1;
+    estrelas[1].y = 13;
+
+    estrelas[2].x = 25;
+    estrelas[2].y = 13;
+
+    estrelas[3].x = 13;
+    estrelas[3].y = 11;
+
+    estrelas[4].x = 13;
+    estrelas[4].y = 23;
+
+    estrelas[5].x = 1;
+    estrelas[5].y = 21;
+
+    for (int i = 0; i < 6; i++)
+    {
+        estrelas[i].estrela = true;
     }
 
     // Reseta os contadores:
@@ -179,11 +204,6 @@ int main()
     icon.loadFromFile("./assets/icon.png");
     window.setIcon(16, 16, icon.getPixelsPtr());
 
-    // Carregando o fundo:
-    /*sf::Texture backgroundTexture;
-    backgroundTexture.loadFromFile("./assets/map.png");
-    sf::Sprite background(backgroundTexture);*/
-
     // Carregando o retângulo final:
     sf::RectangleShape rectangle(sf::Vector2f(LARGURA, COMPRIMENTO));
     rectangle.setFillColor(sf::Color::Black);
@@ -193,6 +213,23 @@ int main()
     sf::Texture blockTexture;
     blockTexture.loadFromFile("./assets/block.png");
     sf::Sprite blockSprite(blockTexture);
+
+    // Carregando os canos:
+    sf::Texture tunnelDownTexture;
+    tunnelDownTexture.loadFromFile("./assets/tunnel_down.png");
+    sf::Sprite tunnelDownSprite(tunnelDownTexture);
+
+    sf::Texture tunnelLeftTexture;
+    tunnelLeftTexture.loadFromFile("./assets/tunnel_left.png");
+    sf::Sprite tunnelLeftSprite(tunnelLeftTexture);
+
+    sf::Texture tunnelRightTexture;
+    tunnelRightTexture.loadFromFile("./assets/tunnel_right.png");
+    sf::Sprite tunnelRightSprite(tunnelRightTexture);
+
+    sf::Texture tunnelUpTexture;
+    tunnelUpTexture.loadFromFile("./assets/tunnel_up.png");
+    sf::Sprite tunnelUpSprite(tunnelUpTexture);
 
     // Carregando as moedas:
     sf::Texture coinTexture;
@@ -270,19 +307,29 @@ int main()
     mushroom.texture.loadFromFile("./assets/mushroom.png");
     mushroom.sprite.setTexture(mushroom.texture);
 
+    // Carregando as estrelas:
+    Entity estrelas[6];
+    for (int i = 0; i < 6; i++)
+    {
+        estrelas[i].texture.loadFromFile("./assets/star.png");
+        estrelas[i].sprite.setTexture(estrelas[i].texture);
+    }
+
     // Carregando efeitos sonoros:
-    sf::Music coinSfx, mushroomSfx;
+    sf::Music coinSfx, mushroomSfx, kickSfx;
     coinSfx.openFromFile("./assets/coin.wav");
     mushroomSfx.openFromFile("./assets/1_up.wav");
+    kickSfx.openFromFile("./assets/kick.wav");
 
-    sf::Music themeMusic, victoryMusic, marioDiesMusic, gameOverMusic;
+    sf::Music themeMusic, victoryMusic, marioDiesMusic, gameOverMusic, starMusic;
     themeMusic.openFromFile("./assets/theme.wav");
     victoryMusic.openFromFile("./assets/victory.wav");
     marioDiesMusic.openFromFile("./assets/mario_dies.wav");
     gameOverMusic.openFromFile("./assets/game_over.wav");
+    starMusic.openFromFile("./assets/star_theme.wav");
 
     // Iniciando o jogo pela primeira vez:
-    restartGame(player, turtles, coinsText, coins, lifes, themeMusic, pointsText);
+    restartGame(player, turtles, estrelas, coinsText, coins, lifes, themeMusic, pointsText);
 
     // Definindo o clock:
     sf::Clock clock;
@@ -326,7 +373,7 @@ int main()
                     {
                         finalText.setString(" ");
 
-                        restartGame(player, turtles, coinsText, coins, lifes, themeMusic, pointsText);
+                        restartGame(player, turtles, estrelas, coinsText, coins, lifes, themeMusic, pointsText);
                         marioDiesMusic.stop();
                         gameOverMusic.stop();
                         victoryMusic.stop();
@@ -338,6 +385,7 @@ int main()
                     coins = totalCoins;
                     coinsText.setString(std::to_string(coins) + " de " + std::to_string(totalCoins));
                     themeMusic.stop();
+                    starMusic.stop();
                     victoryMusic.play();
                     victory = true;
                     break;
@@ -357,7 +405,9 @@ int main()
             if (mushroomInterval >= 30 && mushrooms < 3)
                 isMushroomAvailable = true;
 
-            std::cout << mushroomInterval << std::endl;
+            // Se o mario estiver com a estrela:
+            if (player.estrela)
+                starInterval += interval;
 
             // Se Mario estiver vivo:
             if (!isTheGameOver)
@@ -405,9 +455,20 @@ int main()
                             turtles[i].currentDirection = getRandomRouteAvailable(turtles[i]);
                         else if (routesSize == 1)
                             turtles[i].currentDirection = routes.at(0);
-                        else
-                            std::cout << "Erro: tartaruga sem caminho disponível." << std::endl;
                     }
+
+                    // Detecta os tuneis:
+                    if (turtles[i].x < 0)
+                        turtles[i].x = 24;
+
+                    if (turtles[i].x > 24)
+                        turtles[i].x = 0;
+
+                    if (turtles[i].y < 0)
+                        turtles[i].y = 24;
+
+                    if (turtles[i].y > 24)
+                        turtles[i].y = 0;
                 }
 
                 // Carrega a nova posição do Mario:
@@ -461,6 +522,19 @@ int main()
                     player.x = newX;
                     player.y = newY;
 
+                    // Detecta os tuneis:
+                    if (player.x < 0)
+                        player.x = 24;
+
+                    if (player.x > 24)
+                        player.x = 0;
+
+                    if (player.y < 0)
+                        player.y = 24;
+
+                    if (player.y > 24)
+                        player.y = 0;
+
                     // Se coletar uma moeda:
                     if (coord == '0')
                     {
@@ -476,6 +550,7 @@ int main()
                         if (coins == totalCoins)
                         {
                             themeMusic.stop();
+                            starMusic.stop();
                             victoryMusic.play();
 
                             victory = true;
@@ -489,6 +564,20 @@ int main()
                         mushroomInterval = 0;
                         isMushroomAvailable = false;
                         mushrooms++;
+                    }
+
+                    // Se coletar uma estrela:
+                    for (int i = 0; i < 6; i++)
+                    {
+                        if (newX == estrelas[i].x && newY == estrelas[i].y && estrelas[i].estrela)
+                        {
+                            starMusic.play();
+                            themeMusic.stop();
+                            points += 50;
+                            estrelas[i].estrela = false;
+                            starInterval = 0;
+                            player.estrela = true;
+                        }
                     }
                 }
 
@@ -505,9 +594,20 @@ int main()
                     // Se eles tem colisão:
                     if (samePixel || crossed)
                     {
-                        // Retira vida do Mario:
-                        lifes--;
-                        std::cout << "Mario foi atacado! " + std::to_string(lifes) + " vidas restantes.\n";
+                        // Retira vida do Mario se ele estiver normal ou mata a tartaruga se ele estiver com a estrela:
+                        if (player.estrela)
+                        {
+                            turtles[i].x = 12;
+                            turtles[i].y = 11;
+                            points += 200;
+                            std::cout << "Matou uma tartaruga!\n";
+                            kickSfx.play();
+                        }
+                        else
+                        {
+                            lifes--;
+                            std::cout << "Mario foi atacado! " + std::to_string(lifes) + " vidas restantes.\n";
+                        }
 
                         // Se o Mario morreu:
                         if (lifes <= 0)
@@ -522,6 +622,15 @@ int main()
                         }
                         break;
                     }
+                }
+
+                // Verifica se o efeito da estrela ja acabou:
+                if (starInterval >= 10)
+                {
+                    player.estrela = false;
+                    starInterval = 0;
+                    starMusic.stop();
+                    themeMusic.play();
                 }
             }
             // Se o Mario estiver morto:
@@ -547,7 +656,6 @@ int main()
 
         // Desenha o fundo:
         window.clear(sf::Color::Black);
-        // window.draw(background);
 
         // Desenha o mapa:
         for (int i = 0; i < mapSize; i++)
@@ -568,11 +676,31 @@ int main()
             }
         }
 
+        // Desenha os tuneis:
+        tunnelDownSprite.setPosition(12 * PIXEL, 0);
+        window.draw(tunnelDownSprite);
+        tunnelLeftSprite.setPosition(24 * PIXEL, 13 * PIXEL);
+        window.draw(tunnelLeftSprite);
+        tunnelRightSprite.setPosition(0, 13 * PIXEL);
+        window.draw(tunnelRightSprite);
+        tunnelUpSprite.setPosition(12 * PIXEL, 24 * PIXEL);
+        window.draw(tunnelUpSprite);
+
         // Desenha as tartarugas:
         for (int i = 0; i < 6; i++)
         {
             turtles[i].sprite.setPosition(turtles[i].x * PIXEL, turtles[i].y * PIXEL);
             window.draw(turtles[i].sprite);
+        }
+
+        // Desenha as estrelas:
+        for (int i = 0; i < 6; i++)
+        {
+            if (estrelas[i].estrela)
+            {
+                estrelas[i].sprite.setPosition(estrelas[i].x * PIXEL, estrelas[i].y * PIXEL);
+                window.draw(estrelas[i].sprite);
+            }
         }
 
         // Desenha o Mario:
