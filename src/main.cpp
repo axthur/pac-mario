@@ -14,7 +14,7 @@
 
 const int mapSize = 25;
 char map[mapSize][mapSize + 1] = {
-    "1111111111110111111111111",
+    "111111111111T111111111111",
     "1000000000000000000000001",
     "1011110111110110110111101",
     "1010000100000000110100001",
@@ -27,7 +27,7 @@ char map[mapSize][mapSize + 1] = {
     "1011111110111111011111101",
     "1000000000100001000000001",
     "1011111110110111011111101",
-    "0000000000000000000000000",
+    "T00000000000000000000000T",
     "1111111110111111011111111",
     "1000000010000100000000001",
     "1011111011110111111011101",
@@ -38,7 +38,7 @@ char map[mapSize][mapSize + 1] = {
     "1010000100000100000100001",
     "1011110111110111110111101",
     "1000000000000000000000001",
-    "1111111111110111111111111"};
+    "111111111111T111111111111"};
 
 // Definindo contadores:
 int coins = 0, totalCoins = 0;
@@ -95,6 +95,9 @@ void restartGame(Entity &player, Entity turtles[6], Entity estrelas[6], sf::Text
             if (map[i][j] == ' ')
                 map[i][j] = '0';
 
+    // Reinicia o cogumelo:
+    isMushroomAvailable = false;
+
     // Inicia a posição das tartarugas:
     turtles[0].x = turtles[0].y = turtles[1].x = turtles[2].y = turtles[4].x = 1;
     turtles[1].y = turtles[2].x = turtles[3].x = turtles[3].y = turtles[5].x = 23;
@@ -131,9 +134,7 @@ void restartGame(Entity &player, Entity turtles[6], Entity estrelas[6], sf::Text
     estrelas[5].y = 21;
 
     for (int i = 0; i < 6; i++)
-    {
         estrelas[i].estrela = true;
-    }
 
     // Reseta os contadores:
     coinsText.setString("0 de " + std::to_string(totalCoins));
@@ -577,6 +578,9 @@ int main()
                             estrelas[i].estrela = false;
                             starInterval = 0;
                             player.estrela = true;
+
+                            for (int j = 0; j < 6; j++)
+                                turtles[j].currentDirection = getOppositeDirection(turtles[j].currentDirection);
                         }
                     }
                 }
@@ -676,16 +680,6 @@ int main()
             }
         }
 
-        // Desenha os tuneis:
-        tunnelDownSprite.setPosition(12 * PIXEL, 0);
-        window.draw(tunnelDownSprite);
-        tunnelLeftSprite.setPosition(24 * PIXEL, 13 * PIXEL);
-        window.draw(tunnelLeftSprite);
-        tunnelRightSprite.setPosition(0, 13 * PIXEL);
-        window.draw(tunnelRightSprite);
-        tunnelUpSprite.setPosition(12 * PIXEL, 24 * PIXEL);
-        window.draw(tunnelUpSprite);
-
         // Desenha as tartarugas:
         for (int i = 0; i < 6; i++)
         {
@@ -714,6 +708,16 @@ int main()
             window.draw(mushroom.sprite);
         }
 
+        // Desenha os tuneis:
+        tunnelDownSprite.setPosition(12 * PIXEL, 0);
+        window.draw(tunnelDownSprite);
+        tunnelLeftSprite.setPosition(24 * PIXEL, 13 * PIXEL);
+        window.draw(tunnelLeftSprite);
+        tunnelRightSprite.setPosition(0, 13 * PIXEL);
+        window.draw(tunnelRightSprite);
+        tunnelUpSprite.setPosition(12 * PIXEL, 24 * PIXEL);
+        window.draw(tunnelUpSprite);
+
         // Desenha os contadores:
         window.draw(counterSprite);
         window.draw(coinsText);
@@ -728,6 +732,9 @@ int main()
         {
             window.draw(finalText);
             window.draw(restartText);
+
+            if (death)
+                gameOverMusic.play();
         }
 
         // Exibe a janela:
